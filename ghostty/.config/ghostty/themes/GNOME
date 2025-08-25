@@ -1,0 +1,48 @@
+# GNOME theme portfed from Ptyxis terminal
+palette = 0=#1e1e1e
+palette = 1=#c01c28
+palette = 2=#26a269
+palette = 3=#a2734c
+palette = 4=#12488b
+palette = 5=#a347ba
+palette = 6=#2aa1b3
+palette = 7=#cfcfcf
+
+palette = 8=#5d5d5d
+palette = 9=#f66151
+palette = 10=#33d17a
+palette = 11=#e9ad0c
+palette = 12=#2a7bde
+palette = 13=#c061cb
+palette = 14=#33c7de
+palette = 15=#ffffff
+
+background = 1e1e1e
+foreground = cfcfcf
+cursor-color = cfcfcf
+selection-background = eeffff
+selection-foreground = 545454
+
+# # Adwaita Dark theme 
+# # https://github.com/cnavajas/iTerm2-Color-Schemes/blob/dc07ad70e44c5613fbde05f0861b69c7ff7fe8c0/ghostty/Adwaita%20Dark
+# palette = 0=#241f31
+# palette = 1=#c01c28
+# palette = 2=#2ec27e
+# palette = 3=#f5c211
+# palette = 4=#1e78e4
+# palette = 5=#9841bb
+# palette = 6=#0ab9dc
+# palette = 7=#c0bfbc
+# palette = 8=#5e5c64
+# palette = 9=#ed333b
+# palette = 10=#57e389
+# palette = 11=#f8e45c
+# palette = 12=#51a1ff
+# palette = 13=#c061cb
+# palette = 14=#4fd2fd
+# palette = 15=#f6f5f4
+# background = 1e1e1e
+# foreground = ffffff
+# cursor-color = ffffff
+# selection-background = ffffff
+# selection-foreground = 5e5c64

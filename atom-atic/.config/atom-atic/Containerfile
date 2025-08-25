@@ -1,34 +1,37 @@
 FROM quay.io/fedora/fedora-silverblue:41 AS base
 
-COPY files/rpm-ostreed.conf /etc/rpm-ostreed.conf
-
 FROM base AS clean_default_apps
 
 RUN rpm-ostree uninstall --idempotent \
 	default-editor \
-	firefox \
-	firefox-langpacks \
 	gnome-classic-session \
 	gnome-initial-setup \
 	gnome-tour \
 	nano-default-editor \
-	yelp
+	yelp \
+	firefox \
+	firefox-langpacks
+
 FROM clean_default_apps AS install_basic_packages
 
+# RUN rpm-ostree install --idempotent \
+# 	https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+# 	https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
 COPY files/vscode.repo /etc/yum.repos.d/vscode.repo
+COPY files/ghostty.repo /etc/yum.repos.d/ghostty.repo
+
+# RUN rpm-ostree uninstall --idempotent \
+#         tuned \
+#         tuned-ppd
 
 RUN rpm-ostree install --idempotent \
-	brightnessctl \
-	clevis \
-	clevis-dracut \
-	clevis-luks \
-	clevis-systemd \
-	clevis-udisks2 \
 	code \
 	ddcutil \
 	distrobox \
 	dkms \
 	efibootmgr \
+	ghostty \
 	git \
 	gnome-browser-connector \
 	gnome-tweaks \
@@ -39,23 +42,50 @@ RUN rpm-ostree install --idempotent \
 	libgda-sqlite \
 	libnotify \
 	lm_sensors \
-	mesa-vdpau-drivers \
 	neovim \
 	nvme-cli \
 	openssl \
 	openssl-devel \
+	powerstat \
 	python3-pyclip \
-	sdparm \
 	sdparm \
 	smartmontools \
 	sshfs \
 	stow \
+	waydroid \
 	wl-clipboard
+
+# tlp \
+# tlp-rdw \
+# mesa-va-drivers-freeworld \
+# mesa-vdpau-drivers-freeworld \
+
+# RUN rpm-ostree uninstall --idempotent \
+# 	ffmpeg-free \
+# 	libavcodec-free \
+# 	libavdevice-free \
+# 	libavfilter-free \
+# 	libavformat-free \
+# 	libavutil-free \
+# 	libpostproc-free \
+# 	libswresample-free \
+# 	libswscale-free
+
+# RUN rpm-ostree install --idempotent \
+# 	ffmpeg \
+# 	ffmpeg-libs \
+# 	ffmpegthumbnailer \
+# 	gstreamer1-libav
 
 FROM install_basic_packages AS final_stage
 
+COPY files/rpm-ostreed.conf /etc/rpm-ostreed.conf
+
 RUN mkdir -p /etc/systemd/system/multi-user.target.wants && \
 	ln -s /usr/lib/systemd/system/rpm-ostreed-automatic.timer /etc/systemd/system/timers.target.wants/
+
+# RUN systemctl enable tlp.service
+# RUN systemctl mask systemd-rfkill.service systemd-rfkill.socket
 
 RUN rm -rf /var/* ~/.*
 RUN rpm-ostree cleanup -m

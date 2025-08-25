@@ -1,0 +1,35 @@
+# ~/.config/systemd/user/tlp-status-notify.service
+[Unit]
+Description=Notify on TLP status changes
+After=graphical-session.target
+StartLimitIntervalSec=5
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+Environment=DISPLAY=:0
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
+ExecStart=/bin/sh -c '\
+    logger "TLP notification service triggered"; \
+    if ! TLP_STATUS=$(tlp-stat -s 2>/dev/null | grep "Power source" | cut -d "=" -f2); then \
+        notify-send -u critical "TLP Status Error" "Could not retrieve TLP status"; \
+        exit 1; \
+    fi; \
+    if echo "$TLP_STATUS" | grep -q "AC"; then \
+        dconf write /org/gnome/desktop/interface/enable-animations "true"; \
+        BLUR_STATUS="enabled"; \
+    else \
+        dconf write /org/gnome/desktop/interface/enable-animations "false"; \
+        BLUR_STATUS="disabled"; \
+    fi'
+# fi; \
+# if [ -f /run/tlp/manual.lock ]; then \
+# 	notify-send -t 5000 "TLP Status" "Manual mode active - Power: $TLP_STATUS - Blur $BLUR_STATUS"; \
+# else \
+# 	notify-send -t 5000 "TLP Status" "Automatic mode - Power: $TLP_STATUS - Blur $BLUR_STATUS"; \
+# fi'
+RestartSec=1s
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

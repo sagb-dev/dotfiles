@@ -1,3 +1,4 @@
+;; I use dvorak, that's why this layout looks odd
 (defcfg
 	process-unmapped-keys yes
 	log-layer-changes no
@@ -9,51 +10,16 @@
 )
 
 (defsrc
-	tab    w
-	caps a s d
+	caps
+	spc
 )
 
 (deflayer default
-	@tab    _
-	@caps _ _ _
-)
-
-(deflayer arrow_emulation
-	_        up
-	_  left down rght
+	@caps
+	@spc
 )
 
 (defalias
-	tab (tap-hold-press $tap-time $hold-time tab (layer-toggle arrow_emulation))
-	caps (tap-hold-press $tap-time $hold-time esc rctl)
+	caps (tap-hold $tap-time $hold-time esc rctrl)
+	spc (tap-hold $tap-time $hold-time spc lmet)
 )
-
-;; (defsrc
-	;; p
-	;; caps a s d f j k l scln
-	;; c v
-;; )
-;; 
-;; (deflayer default
-	;; _
-	;; @caps @a @s @d @f @j @k @l @scln
-	;; _ _
-;; )
-;; 
-;; (deflayer arrow_emulation
-	;; rght
-	;; _ _ _ _ _ left _ _ _
-	;; down up
-;; )
-;; 
-;; (defalias
-	;; caps (tap-hold-press $tap-time $hold-time esc (layer-toggle arrow_emulation))
-	;; a (tap-hold $tap-time $hold-time a lalt)
-	;; s (tap-hold $tap-time $hold-time s lmet)
-	;; d (tap-hold $tap-time $hold-time d lsft)
-	;; f (tap-hold $tap-time $hold-time f lctl)
-	;; j (tap-hold $tap-time $hold-time j lctl)
-	;; k (tap-hold $tap-time $hold-time k lsft)
-	;; l (tap-hold $tap-time $hold-time l lmet)
-	;; scln (tap-hold $tap-time $hold-time scln lalt)
-;; )

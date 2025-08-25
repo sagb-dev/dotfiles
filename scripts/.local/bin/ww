@@ -1,6 +1,4 @@
 #!/bin/bash
-# Usage: ww -f "window class filter" -c "run if not found"
-# Usage: ww -fa "window title filter" -c "run if not found"
 
 TOGGLE="false"
 POSITIONAL=()
@@ -18,6 +16,11 @@ while [[ $# -gt 0 ]]; do
 		shift # past argument
 		shift # past value
 		;;
+	-p | --process)
+		PROCESS="$2"
+		shift # past argument
+		shift # past value
+		;;
 	-fa | --filter-alternative)
 		FILTERALT="$2"
 		shift # past argument
@@ -26,6 +29,15 @@ while [[ $# -gt 0 ]]; do
 	-t | --toggle)
 		TOGGLE="true"
 		shift # past argument
+		;;
+	-ia | --info-active)
+		INFO_ACTIVE="1"
+		shift # past argument
+		;;			
+	-u | --current-user)
+		CURRENTUSERONLY="$2"
+		shift # past argument
+		shift # past value
 		;;
 	-h | --help)
 		HELP="1"
@@ -39,42 +51,107 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+if [ -z "$PROCESS" ]; then
+	PROCESS=$COMMAND
+fi
+
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 if [ -n "$HELP" ]; then
 	cat <<EOF
-ww. Utility to raise or jump an applications in KDE. It interacts with KWin using KWin scripts and it is compatible with X11 and Wayland
+ww. Utility to launch a window (or raise it, if it was minimized), or to show information about the active window, or to perform other operations with windows in KDE Plasma. It interacts with KWin using KWin scripts and it is compatible with X11 and Wayland.
 
-Paramaters:
+Parameters:
 
 -h  --help                show this help
+-ia --info-active         show information about the active window. Using this parameter, this program can be periodically called from
+                          other programs, so the user is able to know how much time he/she spends using particular windows, or the user 
+                          is able to stop (in order to save CPU use, bandwith or downloaded MBs) programs when they are not in the
+                          foreground, etc.
 -f  --filter              filter by window class
 -fa --filter-alternative  filter by window title (caption)
 -t  --toggle              also minimize the window if it is already active
 -c  --command             command to check if running and run if no process is found
+-p --process overide the process name used when checking if running, defaults to --command
+-u --current-user         will only search processes of the current user. requires loginctl
 EOF
 	exit 0
+fi
+
+if [ -n "$INFO_ACTIVE" ]; then
+    kwinSupportInfo="$(qdbus org.kde.KWin /KWin supportInformation)" || exit 1
+    kwinVersion="$(awk '/KWin version:/ {print $3}' <<< "$kwinSupportInfo")" || exit 1
+    kwinMajorVersion="$(awk -F"." '{print $1}' <<< "$kwinVersion")" || exit 1    
+    # This feature needs at least this KWin version
+    readonly minimumVersion=6 || exit 1
+    if [[ "$kwinMajorVersion" -lt "$minimumVersion" ]]; then
+        echo "ERROR: This feature needs KWin $minimumVersion or later." >&2 
+        exit 1
+    fi
+
+    # This way is similar to the one used on https://discuss.kde.org/t/xdotool-replacement-on-wayland/7242/9
+    jsFile="$(mktemp)" || exit 1   # It is the file where the javascript code is going to be saved
+    echo "print(\"$jsFile\",workspace.activeWindow.internalId);" > "$jsFile" || exit 1
+    
+    scriptId="$(qdbus org.kde.KWin /Scripting loadScript "$jsFile")" || exit 1
+    timestamp="$(date +"%Y-%m-%d %H:%M:%S")" || exit 1
+    # Starts the script
+    qdbus org.kde.KWin /Scripting/Script"$scriptId" run || exit 1
+    
+    # Uses some arguments that are also seen on https://github.com/jinliu/kdotool/blob/master/src/main.rs
+    outputJournalctl="$(journalctl --since "$timestamp" --user --user-unit=plasma-kwin_wayland.service --user-unit=plasma-kwin_x11.service --output=cat -g "js: $jsFile")" || exit 1
+    # Uses `awk` separately in order to avoid masking a return value, as Shellcheck recommends
+    windowId="$(awk '{print $3}' <<< "$outputJournalctl")" || exit 1
+    # Stops the script
+    qdbus org.kde.KWin /Scripting/Script"$scriptId" stop || exit 1
+    
+    # Shows the information about that window
+    qdbus org.kde.KWin /KWin org.kde.KWin.getWindowInfo "$windowId" || exit 1
+    
+    exit 0
 fi
 
 SCRIPT_TEMPLATE=$(
 	cat <<EOF
 function kwinactivateclient(clientClass, clientCaption, toggle) {
-    var clients = workspace.windowList();
+    var clients = workspace.clientList ? workspace.clientList() : workspace.windowList();
+    var activeWindow = workspace.activeClient || workspace.activeWindow;
     var compareToCaption = new RegExp(clientCaption || '', 'i');
     var compareToClass = clientClass;
-    var isCompareToClass = clientClass.length > 0
+    var isCompareToClass = clientClass.length > 0;
+    var matchingClients = [];
+
     for (var i = 0; i < clients.length; i++) {
         var client = clients[i];
-        var classCompare = (isCompareToClass && client.resourceClass == compareToClass)
-        var captionCompare = (!isCompareToClass && compareToCaption.exec(client.caption))
+        var classCompare = (isCompareToClass && client.resourceClass == compareToClass);
+        var captionCompare = (!isCompareToClass && compareToCaption.exec(client.caption));
         if (classCompare || captionCompare) {
-            if (workspace.activeWindow != client) {
-                workspace.activeWindow = client;
-            } else if (toggle) {
-                client.minimized = true;
-            }
-            break;
+            matchingClients.push(client);
         }
+    }
+
+    if (matchingClients.length === 1) {
+        var client = matchingClients[0];
+        if (activeWindow !== client) {
+            setActiveClient(client);
+        } else if (toggle) {
+            client.minimized = !client.minimized;
+        }
+    } else if (matchingClients.length > 1) {
+
+        matchingClients.sort(function (a, b) {
+            return a.stackingOrder - b.stackingOrder;
+        });
+        const client = matchingClients[0];
+        setActiveClient(client);
+    }
+}
+
+function setActiveClient(client){
+    if (workspace.activeClient !== undefined) {
+        workspace.activeClient = client;
+    } else {
+        workspace.activeWindow = client;
     }
 }
 kwinactivateclient('CLASS_NAME', 'CAPTION_NAME', TOGGLE);
@@ -92,24 +169,29 @@ function ensure_script {
 		SCRIPT_CONTENT=${SCRIPT_TEMPLATE/CLASS_NAME/$1}
 		SCRIPT_CONTENT=${SCRIPT_CONTENT/CAPTION_NAME/$2}
         SCRIPT_CONTENT=${SCRIPT_CONTENT/TOGGLE/$3}
-		#if [ "$1" == "class" ]; then
-		#SCRIPT_CONTENT=${SCRIPT_CLASS_NAME/REPLACE_ME/$2}
-		#else
-		#SCRIPT_CONTENT=${SCRIPT_CAPTION/REPLACE_ME/$2}
-		#fi
 		echo "$SCRIPT_CONTENT" >"$SCRIPT_PATH"
 	fi
 }
 
 if [ -z "$FILTERBY" ] && [ -z "$FILTERALT" ]; then
-	echo You need to specify a window filter. Either by class -f or by title -fa
+	echo "If you want that this program find a window, you need to specify a window filter — either by class (\`-f\`) or by title (\`-fa\`). More information can be seen if this script is called using the \`--help\` parameter."
 	exit 1
 fi
 
-IS_RUNNING=$(pgrep -o -a -f "$COMMAND" | grep -v "$CURRENT_SCRIPT_NAME")
+USER_FILTER=""
+if [ -n "$CURRENTUSERONLY" ] && command -v loginctl >/dev/null 2>&1; then
+	if command -v loginctl >/dev/null 2>&1; then
+   	session_id=$(loginctl show-seat seat0 -p ActiveSession --value)
+   	user_id=$(loginctl show-session "$session_id" -p User --value)
+   	USER_FILTER="-u $user_id"
+	fi
+fi
+
+# shellcheck disable=SC2086
+IS_RUNNING=$(pgrep -o -a -f "$PROCESS")
+
 
 if [ -n "$IS_RUNNING" ] || [ -n "$FILTERALT" ]; then
-	
 	# trying for XDG_CONFIG_HOME first
 	SCRIPT_FOLDER_ROOT=$XDG_CONFIG_HOME
 	if [[ -z $SCRIPT_FOLDER_ROOT ]]; then
@@ -122,17 +204,25 @@ if [ -n "$IS_RUNNING" ] || [ -n "$FILTERALT" ]; then
 	SCRIPT_PATH="$SCRIPT_FOLDER$SCRIPT_NAME"
 	ensure_script "$FILTERBY" "$FILTERALT" "$TOGGLE"
 
-	# install the script
-	ID=$(dbus-send --session --print-reply --dest=org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "string:$SCRIPT_PATH" "string:$SCRIPT_NAME" | awk 'END {print $2}')
-	# run the script
-	dbus-send --session --print-reply --dest=org.kde.KWin /Scripting/Script$ID org.kde.kwin.Script.run >/dev/null 2>&1
-	dbus-send --session --print-reply --dest=org.kde.KWin /Scripting/Script$ID org.kde.kwin.Scripting.run >/dev/null 2>&1
-	# stop the script
-	dbus-send --session --print-reply --dest=org.kde.KWin /Scripting/Script$ID org.kde.kwin.Script.stop >/dev/null 2>&1
-	dbus-send --session --print-reply --dest=org.kde.KWin /Scripting/Script$ID org.kde.kwin.Scripting.stop >/dev/null 2>&1
+	SCRIPT_NAME="ww$RANDOM"
 
-	# uninstall the script
-	dbus-send --session --print-reply --dest=org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "string:$SCRIPT_NAME" >/dev/null 2>&1
+	ID=$(dbus-send --session --dest=org.kde.KWin --print-reply=literal /Scripting org.kde.kwin.Scripting.loadScript "string:$SCRIPT_PATH" "string:$SCRIPT_NAME" | awk '{print $2}')
+
+	# Try legacy first (kde <= 5) and then new (kde >= 6)
+	if dbus-send --session --dest=org.kde.KWin --print-reply=literal "/$ID" org.kde.kwin.Scripting.run 2>/dev/null; then
+    	SCRIPT_PATH="/$ID"
+	else
+    	SCRIPT_PATH="/Scripting/Script$ID"
+	fi
+
+	# Run using detected path
+	dbus-send --session --dest=org.kde.KWin --print-reply=literal "$SCRIPT_PATH" org.kde.kwin.Scripting.run >/dev/null 2>&1
+	dbus-send --session --dest=org.kde.KWin --print-reply=literal "$SCRIPT_PATH" org.kde.kwin.Script.run >/dev/null 2>&1
+
+	# Stop using same path
+	dbus-send --session --dest=org.kde.KWin --print-reply=literal "$SCRIPT_PATH" org.kde.kwin.Scripting.stop >/dev/null 2>&1
+	dbus-send --session --dest=org.kde.KWin --print-reply=literal "$SCRIPT_PATH" org.kde.kwin.Script.stop >/dev/null 2>&1
+
 elif [ -n "$COMMAND" ]; then
 	$COMMAND &
 fi

@@ -12,9 +12,12 @@ Image=docker.io/syncthing/syncthing:latest
 ContainerName=%p
 AutoUpdate=registry
 UserNS=keep-id:uid=1000,gid=1000
-Volume=syncthing:/var/syncthing:z,rw
-Volume=%h/Public/syncthing/passwords:/var/syncthing/passwords:z,rw
+# Volume=syncthing:/var/syncthing:z,rw
+Volume=syncthing:/var/syncthing:Z
+Volume=%h/Documents/sync-docs:/var/syncthing/sync-docs/:Z
+Volume=%h/Pictures/sync-pics:/var/syncthing/sync-pics/:Z
 Network=host
+PublishPort=8384:8384
 
 [Install]
 WantedBy=default.target

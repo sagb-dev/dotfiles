@@ -14,7 +14,7 @@ export LC_COLLATE=C  # For stable sorting
 # export LC_ALL=''
 export LC_ALL="C.UTF-8"
 
-# export GSK_RENDERER=ngl
+export ZDOTDIR=$XDG_CONFIG_HOME/zsh
 
 export XDG_CONFIG_HOME=$HOME/.config
 export XDG_CACHE_HOME=$HOME/.cache
@@ -24,24 +24,37 @@ export XDG_STATE_HOME=$HOME/.local/state
 export PATH="$PATH:$XDG_DATA_HOME/flatpak/exports/bin"
 export PATH="$PATH:/var/lib/flatpak/exports/bin"
 export PATH="$HOME/.local/bin:$PATH"
-
 export CARGO_HOME=$XDG_DATA_HOME/cargo
 export RUSTUP_HOME=$XDG_DATA_HOME/rustup
-
 export ANSIBLE_HOME=$XDG_CONFIG_HOME/ansible
 export ANSIBLE_CONFIG=$XDG_CONFIG_HOME/ansible.cfg
 export ANSIBLE_GALAXY_CACHE_DIR=$XDG_CACHE_HOME/ansible/galaxy_cache
-
 export NPM_CONFIG_USERCONFIG=$XDG_CONFIG_HOME/npm/npmrc
-
+export PATH="$XDG_DATA_HOME/npm/bin:$PATH"
 export SDKMAN_DIR=$XDG_DATA_HOME/sdkman
-
-export ZDOTDIR=$XDG_CONFIG_HOME/zsh
 export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
-# export QT_STYLE_OVERRIDE=adwaita # GNOME
-export EDITOR=nvim
-export VISUAL=nvim
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+eval "$(rbenv init - --no-rehash bash)"
+source "$SDKMAN_DIR/bin/sdkman-init.sh"
+source "$CARGO_HOME/env"
+source "$XDG_DATA_HOME/bob/env/env.sh"
+export ASDF_DATA_DIR="$XDG_DATA_HOME/asdf"
+export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
+
+# pnpm
+export PNPM_HOME="$XDG_DATA_HOME/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
+# bob has to be installed or else it will fail
+export EDITOR=$(which nvim)
+# export SUDO_EDITOR="$(which nvim) -u $XDG_CONFIG_HOME/nvim/sudoedit.lua"
+export SUDO_EDITOR=$(which nvim)
+export VISUAL=$(which nvim)
 
 # https://github.com/junegunn/fzf?tab=readme-ov-file#key-bindings-for-command-line
 # Preview file content using bat (https://github.com/sharkdp/bat)
@@ -49,5 +62,3 @@ export FZF_CTRL_T_OPTS="
   --walker-skip .git,node_modules,target
   --preview 'bat -n --color=always {}'
   --bind 'ctrl-/:change-preview-window(down|hidden|)'"
-
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"

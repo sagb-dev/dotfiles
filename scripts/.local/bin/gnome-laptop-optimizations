@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# Detect power source
+POWER_SOURCE=$(cat /sys/class/power_supply/ADP1/online)
+
+if [[ "$POWER_SOURCE" == "1" ]]; then
+    # On AC power
+	dconf write /org/gnome/desktop/interface/enable-animations "true"
+	dconf write /org/gnome/desktop/interface/color-scheme "'prefer-light'"
+else
+    # On battery
+	dconf write /org/gnome/desktop/interface/enable-animations "false"
+	dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'"
+fi

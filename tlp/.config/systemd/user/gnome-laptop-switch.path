@@ -1,0 +1,12 @@
+[Unit]
+Description=Monitor TLP status changes
+Documentation=man:systemd.path(5)
+
+[Path]
+PathChanged=/run/tlp/manual.lock
+PathChanged=/run/tlp/last_pwr
+PathChanged=/run/tlp/last_run
+Unit=gnome-laptop-switch.service
+
+[Install]
+WantedBy=default.target

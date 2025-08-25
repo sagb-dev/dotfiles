@@ -1,0 +1,74 @@
+FROM quay.io/fedora/fedora-kinoite:latest
+
+RUN rpm-ostree install --idempotent \
+        https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+        https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+RUN rpm-ostree uninstall --idempotent \
+        ffmpeg-free \
+        libavcodec-free \
+        libavdevice-free \
+        libavfilter-free \
+        libavformat-free \
+        libavutil-free \
+        libpostproc-free \
+        libswresample-free \
+        libswscale-free
+
+COPY files/vscode.repo /etc/yum.repos.d/vscode.repo
+COPY files/koi.repo /etc/yum.repos.d/koi.repo
+COPY files/ghostty.repo /etc/yum.repos.d/ghostty.repo
+COPY files/docker-ce.repo /etc/yum.repos.d/docker-ce.repo
+
+RUN rpm-ostree install --idempotent \
+        Koi \
+        cmake \
+        code \
+        containerd.io \
+        distrobox \
+        dkms \
+        docker-buildx-plugin \
+        docker-ce \
+        docker-ce-cli \
+        docker-compose-plugin \
+        efibootmgr \
+        extra-cmake-modules \
+        ffmpeg \
+        ffmpegthumbs \
+        flatpak-xdg-utils \
+        foot \
+        ghostty \
+        hicolor-icon-theme \
+        intel-media-driver \
+        just \
+        kf6-kconfig-devel \
+        kf6-kconfigwidgets-devel \
+        kf6-kcoreaddons-devel \
+        kitty \
+        libnotify \
+        libportal \
+        openssl \
+        openssl-devel \
+        pkg-config \
+        qt6-qtimageformats \
+        slirp4netns \
+        stow \
+        wl-clipboard \
+        xdg-desktop-portal \
+        xdg-desktop-portal-kde \
+        xdg-user-dirs
+
+COPY files/ideapad /etc/sudoers.d/ideapad
+COPY files/modules /etc/modules
+COPY files/rpm-ostreed.conf /etc/rpm-ostreed.conf
+COPY files/10-wayland.conf /etc/sddm.conf.d/10-wayland.conf
+
+RUN mkdir -p /etc/systemd/system/multi-user.target.wants && \
+    ln -s /usr/lib/systemd/system/docker.service /etc/systemd/system/multi-user.target.wants/docker.service && \
+    ln -s /usr/lib/systemd/system/sshd.service /etc/systemd/system/multi-user.target.wants/sshd.service && \
+    ln -s /usr/lib/systemd/system/rpm-ostreed-automatic.timer /etc/systemd/system/timers.target.wants
+
+RUN rm -rf /var/* ~/.*
+RUN rpm-ostree cleanup -m
+
+RUN ostree container commit
