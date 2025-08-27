@@ -183,6 +183,7 @@ setup-rust:
 	source ~/.profile
 	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 	[[ -f "$CARGO_HOME/env" ]] && source "$CARGO_HOME/env"
+	rustup install nightly
 	rustup component add \
 		clippy \
 		rustfmt \
@@ -228,7 +229,8 @@ setup-node:
 	# Install globally
 	pnpm add -g \
 		@olrtg/emmet-language-server \
-		bash-language-server
+		bash-language-server \
+		neovim
 
 setup-ruby:
 	#!/usr/bin/env bash

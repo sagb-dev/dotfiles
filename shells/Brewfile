@@ -1,10 +1,11 @@
 tap "rsteube/homebrew-tap"
-# tap "clojure/tools"
+tap "clojure/tools"
+tap "homebrew/cask"
 
 # brew "act"
-# brew "clojure"
+brew "clojure"
 # brew "dust"
-# brew "git-delta"
+brew "git-delta"
 # brew "gitleaks"
 # brew "mprocs"
 # brew "nushell"
@@ -25,18 +26,18 @@ brew "gallery-dl"
 brew "just"
 brew "lua-language-server"
 brew "marksman"
-brew "openssl"  # uv dependency
+brew "openssl"  # dependency
 brew "rclone"
-brew "readline" # uv dependency
+brew "readline" # dependency
 brew "shellcheck"
-brew "sqlite3" # uv dependency
+brew "sqlite3" # dependency
 brew "stow"
 brew "stylua"
-brew "tcl-tk" # uv dependency
+brew "tcl-tk" # dependency
 brew "tree-sitter"
 brew "tree-sitter-cli"
 brew "tsc"
 brew "uv"
-brew "xz" # uv dependency
+brew "xz" # dependency
 brew "yt-dlp"
-brew "zlib" # uv dependency
+brew "zlib" # dependency
